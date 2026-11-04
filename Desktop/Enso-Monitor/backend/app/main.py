@@ -1,17 +1,23 @@
 from fastapi import FastAPI
 
+from app.core.config import settings
+from app.routers import health
+
 app = FastAPI(
-    title="ENSO Monitor API",
-    description="API de visualisation des données climatiques ENSO (indice ONI - NOAA)",
-    version="0.1.0",
+    title=settings.app_name,
+    description=settings.app_description,
+    version=settings.app_version,
 )
 
+# Enregistrement des routers
+app.include_router(health.router)
 
-@app.get("/")
+
+@app.get("/", tags=["root"])
 def root():
-    return {"message": "ENSO Monitor API is running"}
-
-
-@app.get("/health")
-def health():
-    return {"status": "ok"}
+    """Point d'entrée de l'API. Retourne le nom, la version et le lien vers la doc."""
+    return {
+        "message": f"{settings.app_name} is running",
+        "version": settings.app_version,
+        "docs": "/docs",
+    }
