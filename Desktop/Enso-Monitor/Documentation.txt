@@ -1,0 +1,221 @@
+================================================================================
+ENSO MONITOR - DOCUMENTATION DU PROJET
+================================================================================
+Auteur       : Baba
+Date de début: 2026-11-04
+Dépôt GitHub : https://github.com/Baba77DRAME/Enso-Monitor
+================================================================================
+
+RÈGLES DE DOCUMENTATION
+------------------------
+- Toute la documentation explicative est centralisée dans ce fichier.
+- Le README.md ne contient qu'une présentation courte + instructions essentielles.
+- Ce fichier est mis à jour après chaque étape de développement.
+- Aucune information n'est déclarée comme vérifiée sans l'avoir réellement testée.
+
+
+================================================================================
+PRÉSENTATION DU PROJET
+================================================================================
+
+ENSO Monitor est une application web de visualisation des données climatiques
+basées sur l'indice ONI (Oceanic Niño Index) publié officiellement par la NOAA.
+
+L'indice ONI mesure les anomalies de température de surface de la mer dans le
+Pacifique équatorial central. Il permet de détecter et classifier les phases :
+  - El Niño  : ONI >= +0.5°C pendant au moins 5 saisons consécutives
+  - La Niña  : ONI <= -0.5°C pendant au moins 5 saisons consécutives
+  - Neutre   : entre ces deux seuils
+
+Utilisateurs cibles : scientifiques, étudiants en climatologie, curieux du climat.
+
+Fonctionnalités prévues :
+  - Import automatique des données ONI depuis la NOAA (ETL)
+  - Stockage en base de données PostgreSQL
+  - API REST (FastAPI) exposant les données
+  - Interface web (React) avec graphiques interactifs
+
+
+================================================================================
+ARCHITECTURE TECHNIQUE
+================================================================================
+
+STACK :
+  Frontend  : React 18 + TypeScript + Vite
+  Backend   : Python 3.11 + FastAPI + Pydantic v2
+  Base BDD  : PostgreSQL 15 + SQLAlchemy 2 + Alembic
+  ETL       : Pandas + NumPy + Requests
+  Tests     : Pytest (backend/etl) + Vitest (frontend)
+  Versioning: Git + GitHub
+
+STRUCTURE DES DOSSIERS :
+  enso-monitor/
+  ├── backend/
+  │   ├── app/
+  │   │   ├── models/      → Modèles SQLAlchemy (tables BDD)
+  │   │   ├── schemas/     → Schémas Pydantic (validation données)
+  │   │   ├── routers/     → Routes FastAPI (endpoints API)
+  │   │   ├── services/    → Logique métier (traitement données)
+  │   │   └── main.py      → Point d'entrée de l'API
+  │   ├── tests/           → Tests Pytest du backend
+  │   └── requirements.txt → Dépendances Python du backend
+  ├── etl/
+  │   ├── tests/           → Tests Pytest de l'ETL
+  │   └── requirements.txt → Dépendances Python de l'ETL
+  ├── frontend/            → Application React (initialisée à l'étape suivante)
+  ├── infrastructure/      → Fichiers Docker, docker-compose (à venir)
+  ├── docs/
+  │   └── diagrams/        → Schémas d'architecture (à venir)
+  ├── Documentation.txt    → CE FICHIER
+  ├── README.md            → Présentation courte + instructions
+  └── .gitignore
+
+POURQUOI CETTE ARCHITECTURE :
+  - Séparation claire des responsabilités (backend / etl / frontend)
+  - L'ETL est indépendant du backend : il peut tourner séparément (cron, script)
+  - Les __init__.py dans backend/etl permettent à Python de reconnaître
+    les dossiers comme des packages importables
+  - Les .gitkeep maintiennent les dossiers vides dans Git
+    (Git ne versionne pas les dossiers vides nativement)
+
+
+================================================================================
+ÉTAPES DE DÉVELOPPEMENT
+================================================================================
+
+--- ÉTAPE 0 : Initialisation du dépôt Git (2026-11-04) ---
+
+Actions réalisées :
+  - Création du dépôt Git local dans /Users/babadrame/Desktop/Enso-Monitor
+  - Liaison avec GitHub : https://github.com/Baba77DRAME/Enso-Monitor
+  - Premier commit vide poussé sur la branche main
+  - Création de Documentation.txt
+
+Fichiers créés :
+  - Documentation.txt
+
+Résultats vérifiés :
+  - Dépôt accessible sur https://github.com/Baba77DRAME/Enso-Monitor
+
+---
+
+--- ÉTAPE 1 : Structure du projet et configuration (2026-11-04) ---
+
+Actions réalisées :
+  - Création de toute l'arborescence du projet
+  - Création des fichiers __init__.py pour les packages Python
+  - Création du point d'entrée backend : backend/app/main.py
+  - Création des fichiers requirements.txt (backend et etl)
+  - Création du .gitignore (Python + Node + macOS)
+  - Création du README.md
+  - Mise à jour complète de Documentation.txt
+
+Fichiers créés :
+  - .gitignore
+  - README.md
+  - backend/app/main.py
+  - backend/app/__init__.py
+  - backend/app/models/__init__.py
+  - backend/app/schemas/__init__.py
+  - backend/app/routers/__init__.py
+  - backend/app/services/__init__.py
+  - backend/tests/__init__.py
+  - backend/requirements.txt
+  - etl/__init__.py
+  - etl/tests/__init__.py
+  - etl/requirements.txt
+  - frontend/.gitkeep
+  - infrastructure/.gitkeep
+  - docs/diagrams/.gitkeep
+
+Fichiers modifiés :
+  - Documentation.txt (mise à jour complète)
+
+Choix techniques justifiés :
+  - FastAPI choisi pour sa performance, sa génération automatique de doc
+    Swagger (/docs) et sa compatibilité native avec Pydantic v2
+  - Pydantic v2 pour la validation des données (plus rapide que v1)
+  - SQLAlchemy 2 avec style déclaratif moderne
+  - Alembic pour les migrations de schéma BDD (versionner les changements BDD)
+  - Séparation backend/etl : l'import des données est un processus distinct
+    de l'API, plus propre et plus maintenable
+
+Résultats vérifiés :
+  - Arborescence créée et vérifiée avec `find . -not -path './.git/*'`
+  - Les fichiers __init__.py sont présents dans tous les packages Python
+  - main.py contient un endpoint /health fonctionnel (non démarré à ce stade,
+    les dépendances Python ne sont pas encore installées)
+
+Difficultés / Limites :
+  - Le frontend est un dossier vide pour l'instant (Vite sera initialisé
+    à l'étape suivante avec `npm create vite@latest`)
+  - L'infrastructure (Docker) est vide, à remplir plus tard
+  - Le backend ne peut pas démarrer sans les dépendances installées
+
+Tâches restantes (prochaines étapes) :
+  - Étape 2 : Environnement virtuel Python + installation des dépendances backend
+  - Étape 3 : Initialisation du frontend React/TypeScript avec Vite
+  - Étape 4 : Configuration de la base de données PostgreSQL + Alembic
+  - Étape 5 : Modèle de données ONI + migration initiale
+  - Étape 6 : ETL - import des données NOAA
+  - Étape 7 : Routes API FastAPI
+  - Étape 8 : Interface React avec graphiques
+
+
+================================================================================
+INSTALLATION ET LANCEMENT
+================================================================================
+
+Prérequis système :
+  - Python 3.11+  → vérifier : python3 --version
+  - Node.js 18+   → vérifier : node --version
+  - PostgreSQL 15+ → vérifier : psql --version
+
+Cloner le projet :
+  git clone https://github.com/Baba77DRAME/Enso-Monitor.git
+  cd Enso-Monitor
+
+Backend (à faire à l'étape 2) :
+  cd backend
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install -r requirements.txt
+  uvicorn app.main:app --reload
+  # API disponible sur http://localhost:8000
+  # Doc Swagger   sur http://localhost:8000/docs
+
+Frontend (à faire à l'étape 3) :
+  cd frontend
+  npm install
+  npm run dev
+  # Interface disponible sur http://localhost:5173
+
+ETL (à faire à l'étape 6) :
+  cd etl
+  python3 -m venv .venv
+  source .venv/bin/activate
+  pip install -r requirements.txt
+
+Tests backend :
+  cd backend
+  source .venv/bin/activate
+  pytest
+
+Tests frontend :
+  cd frontend
+  npm run test
+
+
+================================================================================
+DIFFICULTÉS ET DÉCISIONS IMPORTANTES
+================================================================================
+
+2026-11-04 :
+  - Décision : séparer les requirements.txt backend et etl pour isoler
+    les dépendances. L'ETL utilise Pandas/NumPy qui ne sont pas nécessaires
+    au backend. Cela allège les environnements et évite les conflits de versions.
+
+
+================================================================================
+FIN DU DOCUMENT
+================================================================================
