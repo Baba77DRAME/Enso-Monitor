@@ -42,7 +42,8 @@ ARCHITECTURE TECHNIQUE
 
 STACK :
   Frontend  : React 18 + TypeScript + Vite
-  Backend   : Python 3.11 + FastAPI + Pydantic v2
+  Backend   : Python 3.9.6 (macOS système, compatible stack) + FastAPI + Pydantic v2
+  Note      : Python 3.12 recommandé, installer via Homebrew si besoin
   Base BDD  : PostgreSQL 15 + SQLAlchemy 2 + Alembic
   ETL       : Pandas + NumPy + Requests
   Tests     : Pytest (backend/etl) + Vitest (frontend)
@@ -153,13 +154,110 @@ Difficultés / Limites :
   - Le backend ne peut pas démarrer sans les dépendances installées
 
 Tâches restantes (prochaines étapes) :
-  - Étape 2 : Environnement virtuel Python + installation des dépendances backend
   - Étape 3 : Initialisation du frontend React/TypeScript avec Vite
   - Étape 4 : Configuration de la base de données PostgreSQL + Alembic
   - Étape 5 : Modèle de données ONI + migration initiale
   - Étape 6 : ETL - import des données NOAA
-  - Étape 7 : Routes API FastAPI
+  - Étape 7 : Routes API FastAPI ONI
   - Étape 8 : Interface React avec graphiques
+
+---
+
+--- ÉTAPE 2 : Backend FastAPI - API, configuration, tests (2026-11-04) ---
+
+RÔLE DU BACKEND :
+  Le backend est le serveur central de l'application. Il expose une API REST
+  que le frontend consommera pour afficher les données. Il sera aussi le seul
+  composant à lire/écrire dans la base de données PostgreSQL.
+
+COMMENT FONCTIONNE FASTAPI :
+  FastAPI est un framework web Python. Il repose sur deux principes :
+  1. Les routes sont des fonctions Python décorées (@app.get, @app.post, etc.)
+  2. Les données entrantes/sortantes sont validées automatiquement par Pydantic
+  Bonus : FastAPI génère automatiquement une documentation interactive Swagger
+  accessible sur http://localhost:8000/docs sans aucun code supplémentaire.
+
+ORGANISATION DES FICHIERS CRÉÉS :
+  backend/
+  ├── app/
+  │   ├── core/
+  │   │   └── config.py       → Paramètres de l'application via Pydantic Settings
+  │   ├── routers/
+  │   │   └── health.py       → Route GET /health (état de l'API)
+  │   └── main.py             → Crée l'app FastAPI, charge config, branche routers
+  ├── tests/
+  │   ├── conftest.py         → Fixture partagée : client HTTP de test
+  │   └── test_main.py        → 7 tests des routes / et /health
+  ├── .env.example            → Template des variables d'environnement
+  └── pytest.ini              → Config Pytest (dossier tests, pythonpath)
+
+COMMENT FONCTIONNE PYDANTIC SETTINGS (config.py) :
+  - La classe Settings hérite de BaseSettings
+  - Chaque attribut a une valeur par défaut (utilisée si la variable env n'existe pas)
+  - Si un fichier .env existe, les valeurs y sont lues automatiquement
+  - model_config = SettingsConfigDict(...) définit le fichier .env à lire
+  - settings = Settings() crée une instance unique importée partout dans l'app
+  - Exemple : si DATABASE_URL est défini dans .env, il écrase la valeur par défaut
+
+ROUTES CRÉÉES ET VÉRIFIÉES :
+  GET /         → Retourne nom de l'API, version, lien vers /docs
+  GET /health   → Retourne {"status": "ok", "service": "ENSO Monitor API"}
+
+COMMENT FONCTIONNE LE ROUTEUR (health.py) :
+  - APIRouter() crée un mini-routeur indépendant
+  - On y définit des routes comme sur l'app principale
+  - Dans main.py, app.include_router(health.router) branche ce routeur
+  - Avantage : le code est organisé par domaine fonctionnel, pas tout dans main.py
+
+COMMENT FONCTIONNENT LES TESTS PYTEST :
+  - conftest.py définit une fixture "client" : c'est un TestClient FastAPI
+  - TestClient simule des requêtes HTTP sans démarrer de vrai serveur réseau
+  - Chaque test reçoit le client en paramètre et fait une vraie requête simulée
+  - On vérifie le status_code (200 = OK) et le contenu JSON de la réponse
+
+Fichiers créés :
+  - backend/app/core/__init__.py
+  - backend/app/core/config.py
+  - backend/app/routers/health.py
+  - backend/app/main.py         (remplace la version initiale)
+  - backend/tests/conftest.py
+  - backend/tests/test_main.py
+  - backend/.env.example
+  - backend/pytest.ini
+  - backend/.venv/              (environnement virtuel, non versionné)
+
+Choix techniques justifiés :
+  - SettingsConfigDict au lieu de class Config : syntaxe Pydantic v2 moderne,
+    évite les warnings de dépréciation
+  - pytest.ini avec pythonpath = . : permet à Pytest de trouver les modules
+    app.* sans erreur d'import
+  - conftest.py pour la fixture client : évite de répéter TestClient(app)
+    dans chaque test (principe DRY)
+  - Routeur séparé pour /health : prépare l'organisation modulaire du code
+    (un fichier par domaine : health, oni, stats...)
+
+Résultats vérifiés :
+  - Environnement virtuel créé : backend/.venv
+  - Dépendances installées depuis requirements.txt
+  - Tests lancés : pytest tests/ -v
+  - Résultat : 7 passed, 0 failed, 0 warnings
+    ✓ test_root_status_200
+    ✓ test_root_contains_message
+    ✓ test_root_contains_version
+    ✓ test_root_contains_docs_link
+    ✓ test_health_status_200
+    ✓ test_health_returns_ok
+    ✓ test_health_returns_service_name
+
+Difficultés rencontrées :
+  - Python disponible sur la machine : 3.9.6 (macOS système)
+    La cible était 3.12 mais 3.9.6 est compatible avec toute la stack
+  - Premier passage : warning Pydantic sur class Config (syntaxe v1)
+    → Corrigé immédiatement avec SettingsConfigDict (syntaxe v2)
+
+Tâches restantes :
+  - PostgreSQL non encore connecté (database_url présente dans config mais inutilisée)
+  - L'API peut démarrer mais n'a pas encore de données à servir
 
 
 ================================================================================
@@ -175,7 +273,7 @@ Cloner le projet :
   git clone https://github.com/Baba77DRAME/Enso-Monitor.git
   cd Enso-Monitor
 
-Backend (à faire à l'étape 2) :
+Backend (étape 2 - FAIT) :
   cd backend
   python3 -m venv .venv
   source .venv/bin/activate
@@ -183,6 +281,8 @@ Backend (à faire à l'étape 2) :
   uvicorn app.main:app --reload
   # API disponible sur http://localhost:8000
   # Doc Swagger   sur http://localhost:8000/docs
+  # Route racine  : GET http://localhost:8000/
+  # Route santé   : GET http://localhost:8000/health
 
 Frontend (à faire à l'étape 3) :
   cd frontend
