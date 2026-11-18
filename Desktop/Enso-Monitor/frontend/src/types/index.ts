@@ -29,3 +29,20 @@ export interface Stats {
   phase: Phase
   totalCount: number
 }
+
+export interface EpisodeSummary {
+  id: number
+  type: 'el_nino' | 'la_nina'
+  start_season: string
+  start_year: number
+  end_season: string
+  end_year: number
+  duration: number
+  peak_oni: number
+  peak_season: string
+  peak_year: number
+}
+
+export interface EpisodeDetail extends EpisodeSummary {
+  observations: Observation[]
+}

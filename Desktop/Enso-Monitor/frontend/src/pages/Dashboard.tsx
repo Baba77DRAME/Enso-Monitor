@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, Thermometer, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { useObservations } from '../hooks/useObservations'
 import { FilterBar } from '../components/FilterBar'
 import { OniChart } from '../components/OniChart'
@@ -33,16 +33,7 @@ export function Dashboard() {
   const { data, stats, loading, error } = useObservations(dateRange, 200)
 
   return (
-    <div>
-
-      {/* Header */}
-      <header className="header">
-        <Thermometer size={22} />
-        <h1>ENSO Monitor</h1>
-        <span className="source">Source : NOAA CPC — ONI v6</span>
-      </header>
-
-      <main className="main">
+    <main className="main">
 
         <h2 className="page-title">Indice ONI — Oceanic Niño Index</h2>
         <p className="page-subtitle">
@@ -129,7 +120,6 @@ export function Dashboard() {
             </p>
           </>
         )}
-      </main>
-    </div>
+    </main>
   )
 }
