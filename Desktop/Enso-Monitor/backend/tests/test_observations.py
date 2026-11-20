@@ -140,3 +140,74 @@ def test_pagination_second_page(db_client):
     assert data["total"] == 4
     assert len(data["results"]) == 2
     assert data["page"] == 2
+
+
+# ===========================================================================
+# TEST FONCTIONNEL 2 — API
+# Vérifier que la route retourne les observations filtrées (valeurs exactes)
+# et qu'une entrée invalide est rejetée.
+# ===========================================================================
+
+def test_functional_api_filtered_results_contain_correct_oni_values(db_client):
+    """
+    TEST FONCTIONNEL 2a — API (exigé) :
+    Les observations retournées pour une période filtrée doivent contenir
+    exactement les valeurs ONI correspondant à cette période.
+
+    Période demandée : 2000-01-01 → 2000-12-31
+    Observations attendues en base : DJF 2000 (oni=0.5) et JJA 2000 (oni=1.2)
+    """
+    response = db_client.get(
+        "/api/v1/observations?start_date=2000-01-01&end_date=2000-12-31"
+    )
+    assert response.status_code == 200
+    data = response.json()
+
+    # Nombre exact d'observations dans la période
+    assert data["total"] == 2
+
+    # Les valeurs ONI retournées sont exactement celles de la période
+    onis = {round(float(obs["oni"]), 1) for obs in data["results"]}
+    assert 0.5 in onis
+    assert 1.2 in onis
+
+    # Toutes les observations sont bien dans la période demandée
+    for obs in data["results"]:
+        assert "2000-01-01" <= obs["period_start"] <= "2000-12-31"
+
+
+def test_functional_api_observations_outside_period_are_excluded(db_client):
+    """
+    TEST FONCTIONNEL 2b — API :
+    Les observations hors de la période demandée ne doivent pas apparaître
+    dans les résultats, même si elles existent en base.
+    """
+    response = db_client.get(
+        "/api/v1/observations?start_date=2000-01-01&end_date=2000-12-31"
+    )
+    data = response.json()
+
+    # Les observations de 2005 et 2010 ne doivent pas être présentes
+    years_returned = {obs["year"] for obs in data["results"]}
+    assert 2005 not in years_returned
+    assert 2010 not in years_returned
+
+
+def test_functional_api_invalid_date_format_rejected_with_422(db_client):
+    """
+    TEST FONCTIONNEL 2c — API (entrée invalide, exigé) :
+    Une date au format incorrect doit être rejetée avec le code HTTP 422
+    (Unprocessable Entity), jamais avec un 500 ou un 200 silencieux.
+    """
+    invalid_inputs = [
+        "not-a-date",
+        "2000/01/01",
+        "01-01-2000",
+        "2000-13-01",   # mois inexistant
+    ]
+    for bad_date in invalid_inputs:
+        response = db_client.get(f"/api/v1/observations?start_date={bad_date}")
+        assert response.status_code == 422, (
+            f"Date '{bad_date}' devrait être rejetée avec 422, "
+            f"reçu {response.status_code}"
+        )
