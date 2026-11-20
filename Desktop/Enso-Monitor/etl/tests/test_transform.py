@@ -149,3 +149,95 @@ def test_provenance_added():
     assert result.iloc[0]["source"] == "NOAA CPC - ONI v6"
     assert "source_url" in result.columns
     assert "extraction_date" in result.columns
+
+
+# ===========================================================================
+# TEST FONCTIONNEL 1 — ETL
+# Vérifier qu'une observation ONI est correctement transformée depuis le
+# format texte brut NOAA vers le format interne.
+# ===========================================================================
+
+def test_functional_etl_parse_raw_noaa_text_to_internal_format():
+    """
+    TEST FONCTIONNEL 1 — ETL (exigé) :
+    Transforme une observation depuis le format texte brut NOAA
+    (colonnes SEAS YR TOTAL ANOM séparées par espaces) jusqu'au
+    format interne (season, year, sst_total, oni, period_start).
+
+    Simule exactement ce que fait extract.py + transform.py en production.
+    """
+    from etl.transform import parse_raw
+
+    # Texte au format exact du fichier NOAA (en-tête + 2 lignes de données)
+    raw_text = (
+        "SEAS  YR TOTAL ANOM\n"
+        " DJF 1997 28.11  2.09\n"
+        " JFM 1997 28.33  2.21\n"
+    )
+
+    df_raw = parse_raw(raw_text)
+    df_clean = clean(df_raw)
+
+    # Structure attendue
+    assert len(df_clean) == 2
+    assert list(df_clean.columns[:4]) == ["season", "year", "sst_total", "oni"]
+    assert "period_start" in df_clean.columns
+
+    # Première observation : DJF 1997
+    row = df_clean.iloc[0]
+    assert row["season"] == "DJF"
+    assert row["year"] == 1997
+    assert row["oni"] == pytest.approx(2.09)
+    assert row["sst_total"] == pytest.approx(28.11)
+    assert row["period_start"] == date(1997, 1, 1)   # DJF → janvier
+
+    # Deuxième observation : JFM 1997
+    row2 = df_clean.iloc[1]
+    assert row2["season"] == "JFM"
+    assert row2["period_start"] == date(1997, 2, 1)  # JFM → février
+
+
+def test_functional_etl_negative_oni_la_nina_preserved():
+    """
+    TEST FONCTIONNEL 1b — ETL (cas La Niña) :
+    Une valeur ONI négative doit traverser la transformation sans modification
+    de signe ni d'arrondi, pour ne pas inverser un épisode La Niña en El Niño.
+    """
+    from etl.transform import parse_raw
+
+    raw_text = (
+        "SEAS  YR TOTAL ANOM\n"
+        " DJF 1988 25.90 -1.85\n"
+    )
+
+    df_raw = parse_raw(raw_text)
+    df_clean = clean(df_raw)
+
+    oni_value = df_clean.iloc[0]["oni"]
+    assert oni_value < 0, "Une valeur ONI La Niña doit rester négative"
+    assert oni_value == pytest.approx(-1.85)
+
+
+def test_functional_etl_output_types_are_correct():
+    """
+    TEST FONCTIONNEL 1c — ETL (types de données) :
+    Les types de sortie doivent être compatibles avec l'insertion en BDD :
+    - year : entier
+    - oni : float
+    - sst_total : float ou NaN
+    - period_start : datetime.date
+    """
+    from etl.transform import parse_raw
+
+    raw_text = (
+        "SEAS  YR TOTAL ANOM\n"
+        " ASO 2023 27.50  1.60\n"
+    )
+
+    df_raw = parse_raw(raw_text)
+    df_clean = clean(df_raw)
+    row = df_clean.iloc[0]
+
+    assert isinstance(row["period_start"], date)
+    assert isinstance(float(row["oni"]), float)
+    assert isinstance(float(row["sst_total"]), float)
