@@ -121,3 +121,42 @@ it('affiche "Aucune observation" quand la période ne contient pas de données',
     expect(screen.getByText(/aucune observation/i)).toBeInTheDocument()
   })
 })
+
+// ===========================================================================
+// TEST FONCTIONNEL 3 — FRONTEND (exigé)
+// Vérifier que le changement de période met à jour les valeurs affichées.
+// ===========================================================================
+
+it('[FONCTIONNEL 3] les valeurs affichées se mettent à jour quand la période change', async () => {
+  /**
+   * Scénario :
+   * 1. Chargement initial → FIXTURE_PAGE_1
+   *    → dernière obs DJF 2020 (oni=0.2) → phase = Neutre
+   * 2. Changement de date de début → FIXTURE_FILTERED
+   *    → dernière obs JJA 2015 (oni=-0.7) → phase = La Niña
+   * On vérifie que la phase affichée change, prouvant que les données
+   * sont bien mises à jour et pas simplement gardées en cache.
+   */
+  const fetchMock = vi.fn()
+    .mockResolvedValueOnce({ ok: true, json: async () => FIXTURE_PAGE_1 })
+    .mockResolvedValue({ ok: true, json: async () => FIXTURE_FILTERED })
+
+  vi.stubGlobal('fetch', fetchMock)
+  render(<Dashboard />)
+
+  // État initial : phase Neutre (DJF 2020, oni=0.2 est entre -0.5 et +0.5)
+  await waitFor(() => {
+    expect(screen.getByText('Neutre')).toBeInTheDocument()
+  })
+
+  // Changer la date de début → déclenche un nouveau fetch
+  const startInput = screen.getByLabelText('Du')
+  fireEvent.change(startInput, { target: { value: '2014-01-01' } })
+
+  // Après le refetch : phase La Niña (JJA 2015, oni=-0.7 ≤ -0.5)
+  await waitFor(() => {
+    expect(screen.getByText('La Niña')).toBeInTheDocument()
+    // La phase précédente ne doit plus être affichée
+    expect(screen.queryByText('Neutre')).not.toBeInTheDocument()
+  })
+})
